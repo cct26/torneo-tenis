@@ -1,0 +1,24 @@
+name: Mantener Supabase activo
+
+# Consulta la base cada 3 días para que el plan gratis de Supabase no pause el proyecto.
+# Toma la URL y la llave pública de config.js, así que no hay que configurar nada más.
+on:
+  schedule:
+    - cron: "17 14 */3 * *"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  consultar:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Consultar la base
+        run: |
+          URL=$(grep -oE 'url:[[:space:]]*"[^"]+"' config.js | sed -E 's/.*"([^"]+)"/\1/')
+          KEY=$(grep -oE 'anonKey:[[:space:]]*"[^"]+"' config.js | sed -E 's/.*"([^"]+)"/\1/')
+          CODE=$(curl -s -o /dev/null -w "%{http_code}" "$URL/rest/v1/docs?select=path&limit=1" -H "apikey: $KEY")
+          echo "Supabase respondió: $CODE"
+          test "$CODE" = "200"
