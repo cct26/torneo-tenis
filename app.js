@@ -220,6 +220,7 @@ function vConv(){const t=S.T[S.tid]||{};const poster=t.poster&&(/^https:\/\//.te
 // ---------- avisos ----------
 Object.assign(S,{av:{},avE:'',avD:{t:'',x:'',fijo:false},avF:null,avDel:'',avBusy:false});
 (()=>{if(!document.querySelector('.tab[data-v="avisos"]')){const b=document.createElement('button');b.className='tab';b.dataset.v='avisos';b.innerHTML='<span>Avisos</span>';const c=document.querySelector('.tab[data-v="conv"]');c.parentNode.insertBefore(b,c)}
+  if(!document.querySelector('.tab[data-v="juego"]')){const j=document.createElement('button');j.className='tab';j.dataset.v='juego';j.innerHTML='<span>Juego</span>';const c=document.querySelector('.tab[data-v="conv"]');c.parentNode.insertBefore(j,c.nextSibling)}
   const st=document.createElement('style');st.textContent=`
 .tab .nb{display:inline-block;transform:skewX(10deg);margin-left:6px;min-width:20px;height:20px;padding:0 6px;border-radius:999px;background:var(--mag);color:#fff;font:800 12px/20px Montserrat,sans-serif;font-style:normal;text-align:center;vertical-align:1px}
 .avs{display:grid;gap:16px;max-width:720px}
@@ -535,7 +536,7 @@ $('view').addEventListener('change',async e=>{const t=e.target,k=K();
   if(t.id==='oFile'&&t.files.length){S.msg='';try{S.imp=await leerArchivos([...t.files])}catch(err){S.imp={by:{},warn:['No pude leer el archivo. Si es Excel, revisa tu conexión (se descarga un lector) o guárdalo como CSV.']}}render();return}
   if(t.id==='oPost'&&t.files[0]){try{const a=await assets.upload(t.files[0]);await db.doc('torneos/'+S.tid).update({poster:a.url});S.msg='Póster actualizado.';render()}catch(err){setSt('No se pudo subir el póster.')}return}
 });
-$('tabs').addEventListener('click',e=>{const b=e.target.closest('.tab');if(!b)return;const v=b.dataset.v;if(v==='S'||v==='D'){S.view=v;S.mod=v;S.fecha='';S.cat='';S.fcat=''}location.hash=v==='avisos'?'avisos':v==='conv'?'convocatoria':v==='org'?'organizar':(v==='S'?'singles':'dobles')+'-'+(S.rama==='F'?'femenil':'varonil')});
+$('tabs').addEventListener('click',e=>{const b=e.target.closest('.tab');if(!b)return;const v=b.dataset.v;if(v==='juego'){location.href='juego.html';return}if(v==='S'||v==='D'){S.view=v;S.mod=v;S.fecha='';S.cat='';S.fcat=''}location.hash=v==='avisos'?'avisos':v==='conv'?'convocatoria':v==='org'?'organizar':(v==='S'?'singles':'dobles')+'-'+(S.rama==='F'?'femenil':'varonil')});
 const hashOf=()=>(S.mod==='S'?'singles':'dobles')+'-'+(S.rama==='F'?'femenil':'varonil');
 function route(){const h=location.hash.slice(1);let m;
   if(h==='avisos')S.view='avisos';else if(h==='convocatoria')S.view='conv';else if(h==='organizar')S.view='org';
