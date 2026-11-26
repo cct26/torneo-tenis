@@ -160,6 +160,7 @@ function vGrupos(mm){if(!mm.cs.length)return vacio(mm);
    (gs.length?`<div class="grid">${gs.map(g=>cardGrupo(mm,g)).join('')}</div>`:'<p class="empty">Sin grupos.</p>')}
 
 function vLlaves(mm){if(!mm.cs.length)return vacio(mm);if(!mm.cs.includes(S.cat))S.cat=mm.cs[0];const cat=S.cat,{sl,fija,c}=slots(mm,cat),rs=rondas(mm,cat);
+  if(c.tam&&!fija&&!c.done){const tot=c.T.reduce((n,t)=>n+t.g.ms.length,0),jug=c.T.reduce((n,t)=>n+t.g.ms.filter(m=>outcome(eff(mm,m))).length,0);return catChips(mm,'cat',cat,false)+`<p class="empty"><b>La llave de Cat. ${esc(cat)} se publica cuando terminen todos sus grupos.</b><br>Van ${jug} de ${tot} partidos de grupo jugados.</p>`}
   const chips=catChips(mm,'cat',cat,false);
   const estado=!c.tam?'Sin llave: la posición final sale de la tabla del grupo.':fija?'Llave fijada.':c.done?'Grupos terminados: la llave ya es definitiva, puedes fijarla.':'Proyección con los resultados actuales; cambia mientras se juegan los grupos.';
   let tools='';
