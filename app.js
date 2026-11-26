@@ -146,7 +146,7 @@ function cardGrupo(mm,g){const t=tabla(mm,g),c=clasif(mm,g.cat),qn=new Set(c.lis
     body=`<div class="plist">${g.m.map((e,i)=>`<div class="edrow"><b>${i+1}</b><select data-slot="${i}" aria-label="Lugar ${i+1}"><option value="">— vacío —</option>${pool.map(([id,x])=>`<option value="${esc(id)}" ${id===e?'selected':''}>${esc(nombreE(x))}${esc(where(id))}</option>`).join('')}</select><button class="mini danger" data-rmslot="${i}" aria-label="Quitar lugar ${i+1}">Quitar</button></div>`).join('')}</div>
     <div class="acts"><button class="btn" data-addslot="1">Agregar lugar</button><button class="btn ${S.delG===g.id?'pri':''}" data-delg="1">${S.delG===g.id?'Toca otra vez para eliminar':'Eliminar grupo'}</button><button class="btn pri" data-edg="">Listo</button></div>
     <p class="note">Cambiar un jugador conserva el horario de sus partidos. Los resultados ya capturados de ese lugar dejan de contar. Al agregar un lugar se crean sus partidos sin fecha.</p>`}
-  else{const rows=t.st.map(s=>`<tr class="${t.any&&qn.has(s.e)?'q':''}"><td>${s.i}</td><td>${nm(s.n)}${s.ret?' <small>(abandonó)</small>':''}</td><td>${s.pj}</td><td>${s.pg}</td><td>${s.sg}/${s.sj}</td><td>${s.sj?pct(s.ps):'–'}</td><td>${s.jg}/${s.jj}</td><td>${s.jj?pct(s.pjg):'–'}</td><td class="pos">${t.any?s.pos:'–'}</td></tr>`).join('');
+  else{const rows=t.st.map(s=>`<tr class="${c.done&&qn.has(s.e)?'q':''}"><td>${s.i}</td><td>${nm(s.n)}${s.ret?' <small>(abandonó)</small>':''}</td><td>${s.pj}</td><td>${s.pg}</td><td>${s.sg}/${s.sj}</td><td>${s.sj?pct(s.ps):'–'}</td><td>${s.jg}/${s.jj}</td><td>${s.jj?pct(s.pjg):'–'}</td><td class="pos">${t.any?s.pos:'–'}</td></tr>`).join('');
     body=`<div class="scroll"><table><thead><tr><th>Nº</th><th>Nombre</th><th>PJ</th><th>PG</th><th>SG/SJ</th><th>% Set</th><th>JG/JJ</th><th>% Jgo</th><th>Pos</th></tr></thead><tbody>${rows||'<tr><td colspan="9">Sin integrantes</td></tr>'}</tbody></table></div>
     <div class="list">${g.ms.map(m=>rowMatch(mm,m,true)).join('')}</div>`}
   return `<article class="card" data-g="${esc(g.id)}"><div class="rib"><h3>${S.q?'Cat. '+esc(g.cat)+' · ':''}Grupo ${g.n}</h3><span>${canW&&!ed?`<button class="mini" data-edg="${esc(g.id)}">Editar</button> `:''}<small class="${t.done?'ok':''}">${t.done?'Terminado':pj+' de '+g.ms.length}</small></span></div>${body}</article>`}
@@ -154,7 +154,7 @@ function vGrupos(mm){if(!mm.cs.length)return vacio(mm);
   if(!mm.cs.includes(S.cat))S.cat=mm.cs[0];
   const gs=S.q?mm.G.filter(g=>g.m.some(e=>e&&hit(nombreE(mm.E[e])))):mm.G.filter(g=>g.cat===S.cat);
   const sueltos=S.q?[]:Object.entries(mm.E).filter(([id,e])=>e.cat===S.cat&&!mm.G.some(g=>g.m.includes(id)));
-  return (S.q?'':catChips(mm,'cat',S.cat,false))+`<p class="note">Desempate: partidos ganados; si empatan dos, el que ganó entre ellos; si empatan tres, % de sets y luego % de juegos. ● = va a la fase final con los resultados actuales.</p>`+
+  return (S.q?'':catChips(mm,'cat',S.cat,false))+`<p class="note">Desempate: partidos ganados; si empatan dos, el que ganó entre ellos; si empatan tres, % de sets y luego % de juegos. ● = clasificado a la fase final (se marca cuando terminan todos los grupos de la categoría).</p>`+
    (canW&&!S.q?`<div class="tools"><button class="btn" data-newg="1">Nuevo grupo en Cat. ${esc(S.cat)}</button></div>`:'')+
    (sueltos.length?`<p class="note"><b>Sin grupo:</b> ${sueltos.map(([,e])=>esc(nombreE(e))).join(', ')}</p>`:'')+
    (gs.length?`<div class="grid">${gs.map(g=>cardGrupo(mm,g)).join('')}</div>`:'<p class="empty">Sin grupos.</p>')}
@@ -180,14 +180,24 @@ function vLlaves(mm){if(!mm.cs.length)return vacio(mm);if(!mm.cs.includes(S.cat)
   const pts=`<div class="pts"><h3>Puntos para la Copa</h3>${pt.length?pt.map(([n,l,p])=>`<div><span>${nm(n)} · ${l}</span><b>${p.toLocaleString('es-MX')} pts</b></div>`).join(''):'<p class="note">Aparecen al definirse semifinales y final: campeón 1,000, finalista 800, semifinalista 600.</p>'}</div>`;
   return chips+`<p class="note">${estado} Por omisión avanzan los primeros de grupo y, si faltan lugares, los mejores segundos; se evita que dos del mismo grupo se crucen en la primera ronda. Ajusta tamaño o cruces según el comité.</p>`+tools+seeds+qual+br+pts}
 
+function vFicha(mm,id,quien){const e=mm.E[id],g=mm.G.find(x=>x.m.includes(id));
+  const ms=[...mm.GM.filter(m=>m.ea===id||m.eb===id),...koMatches(mm,true).filter(m=>m.ea===id||m.eb===id)].sort(byWhen);
+  let pj=0,pg=0;for(const m of ms){const o=outcome(eff(mm,m));if(!o)continue;pj++;if((o.w==='a'?m.ea:m.eb)===id)pg++}
+  let pos='';if(g){const t=tabla(mm,g),s=t.st.find(x=>x.e===id);if(s&&t.any)pos=`${s.pos}º de ${t.st.length} en el grupo`}
+  const datos=[`Cat. ${esc(e.cat)}`,g?`Grupo ${g.n}`:'Sin grupo',e.club?esc(e.club):''].filter(Boolean).join(' · ');
+  const stats=`<div class="qual"><span><b>${pj}</b>jugados</span><span><b>${pg}</b>ganados</span><span><b>${pj-pg}</b>perdidos</span><span><b>${ms.length-pj}</b>por jugar</span>${pos?`<span><b>${pos.split(' ')[0]}</b>${esc(pos.slice(pos.indexOf(' ')+1))}</span>`:''}</div>`;
+  return `<div class="tools"><button class="btn" data-vj="">← Volver a la lista</button>${canW?`<button class="btn" data-ej="${esc(id)}">Editar datos</button>`:''}</div>
+  <h3 class="cath">${esc(nombreE(e))}</h3><p class="note">${datos}</p>${stats}
+  ${ms.length?`<div class="list">${ms.map(m=>rowMatch(mm,m,true)).join('')}</div>`:`<p class="empty">Aún no tiene partidos programados.</p>`}`}
 function vJugadores(mm){const quien=S.mod==='D'?'pareja':(S.rama==='F'?'jugadora':'jugador');
+  if(S.verJ&&mm.E[S.verJ])return vFicha(mm,S.verJ,quien);
   const list=Object.entries(mm.E).filter(([,e])=>!S.q||hit(nombreE(e))||hit(e.club||''));
   let h=canW?`<div class="tools"><button class="btn pri" data-addj="1">Agregar ${quien}</button><button class="btn" data-go="org">Importar Excel o CSV</button></div>`:'';
   if(!list.length)return h+(S.q?'<p class="empty">Sin resultados.</p>':vacio(mm));
   for(const cat of mm.cs){const es=list.filter(([,e])=>e.cat===cat).sort((a,b)=>nombreE(a[1]).localeCompare(nombreE(b[1])));if(!es.length)continue;
     h+=`<h3 class="cath">Cat. ${esc(cat)} <small class="where">${es.length}</small></h3><div class="plist">`+es.map(([id,e])=>{const g=mm.G.find(x=>x.m.includes(id));
       const inner=`<span>${nm(nombreE(e))}</span><small>${g?'Grupo '+g.n:'Sin grupo'}</small>${e.club?`<small style="grid-column:1/-1">${nm(e.club)}</small>`:''}`;
-      return canW?`<button class="pi" data-ej="${esc(id)}">${inner}</button>`:`<div class="pi">${inner}</div>`}).join('')+'</div>'}
+      return `<button class="pi" data-vj="${esc(id)}">${inner}</button>`}).join('')+'</div>'}
   return h}
 
 function convHTML(txt){const L=String(txt||'').split(/\r?\n/);let out='',sec=null,ul=false,big=false;
@@ -398,8 +408,9 @@ $('jDel').onclick=()=>{if($('jDel').textContent==='Eliminar'){$('jDel').textCont
 
 // ---------- eventos ----------
 $('view').addEventListener('click',async e=>{const b=e.target.closest('button');if(!b)return;const ds=b.dataset;
-  if(ds.rama){S.rama=ds.rama;S.fecha='';S.cat='';S.fcat='';S.edG='';location.hash=hashOf();return}
-  if(ds.sub){S.sub=ds.sub;S.edG='';render();return}
+  if(ds.rama){S.verJ='';S.rama=ds.rama;S.fecha='';S.cat='';S.fcat='';S.edG='';location.hash=hashOf();return}
+  if(ds.sub){S.sub=ds.sub;S.edG='';S.verJ='';render();return}
+  if(ds.vj!==undefined){S.verJ=ds.vj;render();const bar=document.querySelector('.bar');if(bar&&window.scrollY>bar.offsetTop)scrollTo({top:bar.offsetTop});return}
   if(ds.fecha!==undefined){S.fecha=ds.fecha;render();return}
   if(ds.fcat!==undefined){S.fcat=ds.fcat;render();return}
   if(ds.cat!==undefined){S.cat=ds.cat;S.edS=false;S.edG='';render();return}
