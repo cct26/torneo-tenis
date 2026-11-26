@@ -42,6 +42,7 @@ canvas{display:block;width:100%;height:100%;image-rendering:pixelated;image-rend
 .big{min-height:52px;padding:0 34px;border:0;border-radius:12px;background:var(--lime);color:var(--navyd);font:400 22px var(--hd);cursor:pointer;box-shadow:4px 4px 0 var(--mag)}
 .lnk{background:none;border:0;color:#fff;text-decoration:underline;font:700 14px Montserrat;cursor:pointer;min-height:40px}
 .rec{font-size:12px;color:#aeb5ff}
+.ov p.lema{font:italic 800 17px/1.3 Montserrat;color:#fff;max-width:28ch}
 #pad{width:min(100vw,560px);height:178px;flex:none;margin-top:auto;display:flex;justify-content:space-between;align-items:center;padding:8px 18px;touch-action:none}
 #stick{width:150px;height:150px;border-radius:50%;background:radial-gradient(circle,#ffffff14 0 55%,#ffffff08 56%);border:2px solid #ffffff30;position:relative;touch-action:none}
 #knob{position:absolute;left:50%;top:50%;width:64px;height:64px;margin:-32px 0 0 -32px;border-radius:50%;background:#ffffff40;border:3px solid #ffffff80;pointer-events:none}
@@ -67,11 +68,11 @@ canvas{display:block;width:100%;height:100%;image-rendering:pixelated;image-rend
   <div id="msg"></div><div id="hint"></div>
   <div class="ov" id="menu"><div class="in">
     <h1>Mini Tenis<small>Campestre</small></h1>
+    <p class="lema">Mientras esperas tu partido, ¡diviértete con este minijuego!</p>
     <a class="lnk" href="./" id="back2">← Volver al torneo</a>
     <label>Tu nombre<input type="text" id="iName" maxlength="10" placeholder="Tú" autocomplete="off"></label>
     <label>Rival<div class="seg" id="sLvl"><button data-v="0">Cat. D<small>Fácil</small></button><button data-v="1">Cat. B<small>Normal</small></button><button data-v="2">Abierta<small>Difícil</small></button></div></label>
     <label>Partido<div class="seg" id="sLen"><button data-v="1">1 juego</button><button data-v="3">A 3 juegos</button><button data-v="4">A 4 juegos</button></div></label>
-    <label class="chk"><input type="checkbox" id="iAst"> Ayuda para moverme a la pelota</label>
     <label class="chk"><input type="checkbox" id="iSnd"> Sonido</label>
     <button class="big" id="bGo">Jugar</button>
     <p>Muévete con la palanca y toca <b>GOLPE</b> cuando la pelota llegue a ti. Mientras golpeas, inclina la palanca a un lado para apuntar. <b>GLOBO</b> manda la pelota alta y profunda. Para sacar: toca GOLPE para lanzar la pelota y otra vez arriba para pegarle.</p>
@@ -100,7 +101,7 @@ const PTS=['0','15','30','40'];
 // ---------- estado ----------
 const store={get(k,d){try{const v=localStorage.getItem('mt-'+k);return v===null?d:JSON.parse(v)}catch(e){return d}},set(k,v){try{localStorage.setItem('mt-'+k,JSON.stringify(v))}catch(e){}}};
 const coarse=matchMedia('(pointer:coarse)').matches;
-const G={state:'menu',lvl:store.get('lvl',0),need:store.get('need',3),assist:store.get('assist',coarse),snd:store.get('snd',true),name:store.get('name',''),
+const G={state:'menu',lvl:store.get('lvl',0),need:store.get('need',3),assist:false,snd:store.get('snd',true),name:store.get('name',''),
   pts:[0,0],games:[0,0],server:'P',serveN:1,deuce:true,srvSide:1,boxSign:-1,timer:0,next:null,toss:false,tossBy:'',
   p:{x:0,z:-12.3,swing:0,used:true,lob:false,sw:1,phase:0,run:false,tx:null},
   c:{x:0,z:12.3,swing:0,sw:1,phase:0,run:false,tx:0,tz:12,plan:false,react:0,let:false,wait:0},
@@ -312,7 +313,6 @@ function seg(id,val,set){const s=$(id);const paint=()=>s.querySelectorAll('butto
   s.addEventListener('click',e=>{const b=e.target.closest('button');if(!b)return;set(+b.dataset.v);paint()})}
 seg('sLvl',()=>G.lvl,v=>{G.lvl=v;store.set('lvl',v);recTxt()});seg('sLen',()=>G.need,v=>{G.need=v;store.set('need',v)});
 $('iName').value=G.name;$('iName').addEventListener('input',e=>{G.name=e.target.value.trim();store.set('name',G.name);ui()});
-$('iAst').checked=G.assist;$('iAst').onchange=e=>{G.assist=e.target.checked;store.set('assist',G.assist)};
 $('iSnd').checked=G.snd;$('iSnd').onchange=e=>{G.snd=e.target.checked;store.set('snd',G.snd)};
 function recTxt(){const r=store.get('rec',[[0,0],[0,0],[0,0]])[G.lvl];$('rec').textContent=r[0]+r[1]?`Tu récord contra ${LV[G.lvl].n}: ${r[0]} ganados, ${r[1]} perdidos`:''}
 recTxt();
