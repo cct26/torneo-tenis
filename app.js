@@ -217,6 +217,87 @@ function vConv(){const t=S.T[S.tid]||{};const poster=t.poster&&(/^https:\/\//.te
   const body=t.convocatoria?convHTML(t.convocatoria):`<p class="empty">Este torneo aún no tiene convocatoria.${canW?' Agrégala en Organizar.':''}</p>`;
   return `<div class="conv"><div>${body}</div>${side?`<aside class="side">${side}</aside>`:''}</div>`}
 
+// ---------- avisos ----------
+Object.assign(S,{av:{},avE:'',avD:{t:'',x:'',fijo:false},avF:null,avDel:'',avBusy:false});
+(()=>{if(!document.querySelector('.tab[data-v="avisos"]')){const b=document.createElement('button');b.className='tab';b.dataset.v='avisos';b.innerHTML='<span>Avisos</span>';const c=document.querySelector('.tab[data-v="conv"]');c.parentNode.insertBefore(b,c)}
+  const st=document.createElement('style');st.textContent=`
+.tab .nb{display:inline-block;transform:skewX(10deg);margin-left:6px;min-width:20px;height:20px;padding:0 6px;border-radius:999px;background:var(--mag);color:#fff;font:800 12px/20px Montserrat,sans-serif;font-style:normal;text-align:center;vertical-align:1px}
+.avs{display:grid;gap:16px;max-width:720px}
+.av{background:var(--card);border:2px solid var(--line);border-radius:14px;overflow:hidden}
+.av.fijo{border-color:var(--mag)}
+.av .avh{display:flex;justify-content:space-between;align-items:center;gap:10px;padding:10px 16px;background:var(--navy);color:#fff}
+.av.fijo .avh{background:var(--mag)}
+.av h3{margin:0;font:italic 900 18px/1.2 Montserrat,sans-serif;text-transform:uppercase;min-width:0;overflow-wrap:anywhere}
+.av .avh small{flex:none;font-weight:700;font-size:13px;opacity:.9;text-align:right}
+.av .pin{display:inline-block;font:800 11px Montserrat,sans-serif;font-style:normal;background:var(--lime);color:var(--navyd);border-radius:6px;padding:2px 7px;margin-right:8px;vertical-align:2px}
+.av .tx{padding:12px 16px;white-space:pre-line;overflow-wrap:anywhere;font-size:16px}
+.av .tx a{color:var(--mag);font-weight:700}
+.av .tx strong{color:var(--mag)}
+.av .im{display:block;background:#0b0f33}
+.av .im img{display:block;width:100%;height:auto;max-height:85vh;object-fit:contain}
+.av .acts{margin:0;padding:12px 16px 14px}
+.avban{display:flex;align-items:center;gap:10px;width:100%;text-align:left;background:var(--lime);color:var(--navyd);border:0;border-radius:12px;padding:10px 14px;margin:0 0 14px;font:700 15px Montserrat,sans-serif;cursor:pointer;min-height:48px}
+.avban b{font:italic 900 13px Montserrat,sans-serif;text-transform:uppercase;background:var(--mag);color:#fff;border-radius:6px;padding:3px 8px;flex:none}
+.avban span{flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.avform textarea{min-height:140px;font-size:16px}
+.form label.chk{display:flex;align-items:center;gap:10px;min-height:44px}
+.form label.chk input{width:22px;height:22px;min-height:22px;padding:0;accent-color:var(--mag)}
+.avprev{margin-top:10px;display:flex;flex-wrap:wrap;align-items:flex-end;gap:10px}
+.avprev img{max-width:220px;max-height:220px;border-radius:10px;display:block}`;document.head.appendChild(st)})();
+const fmtTs=ts=>{const d=new Date(ts||0);return `${DOW[d.getDay()]} ${d.getDate()} ${MES[d.getMonth()]} · ${String(d.getHours()).padStart(2,'0')}:${String(d.getMinutes()).padStart(2,'0')}`};
+const avTxt=s=>esc(s).replace(/\*\*(.+?)\*\*/g,'<strong>$1</strong>').replace(/https?:\/\/[^\s<]+/g,u=>`<a href="${u}" target="_blank" rel="noopener">${u}</a>`);
+const avOk=u=>/^https:\/\//.test(u||'')?u:'';
+const avList=()=>Object.entries(S.av).map(([id,a])=>({...a,id})).filter(a=>a.t||a.x||avOk(a.img)).sort((a,b)=>(!!b.fijo-!!a.fijo)||((b.ts||0)-(a.ts||0)));
+const avKey=()=>'cct-avv-'+S.tid;
+function avSeen(){try{return +localStorage.getItem(avKey())||0}catch(e){return 0}}
+function avNuevos(){const s=avSeen(),lim=Date.now()-7*864e5;return avList().filter(a=>(a.ts||0)>s&&(a.ts||0)>lim)}
+function avMark(){try{localStorage.setItem(avKey(),String(Date.now()))}catch(e){}}
+function avReset(){if(S.avF)URL.revokeObjectURL(S.avF.url);S.avE='';S.avD={t:'',x:'',fijo:false};S.avF=null;S.avDel=''}
+function avBanner(){const n=avNuevos().filter(a=>(a.ts||0)>Date.now()-3*864e5);if(!n.length)return '';n.sort((a,b)=>(b.ts||0)-(a.ts||0));const a=n[0];
+  const txt=a.t||String(a.x||'').split('\n')[0]||'Nuevo aviso con imagen';
+  return `<button class="avban" data-goav="1"><b>${n.length>1?n.length+' avisos':'Aviso'}</b><span>${esc(txt)}</span><span aria-hidden="true" style="flex:none">›</span></button>`}
+function avForm(){const d=S.avD,ed=S.avE&&S.av[S.avE];const img=S.avF?S.avF.url:(ed&&!d.noImg?avOk(ed.img):'');
+  return `<section class="box avform"><h2>${ed?'Editar aviso':'Nuevo aviso'}</h2><div class="form">
+  <label class="full">Título (opcional)<input data-av="t" value="${esc(d.t)}" maxlength="120" placeholder="Ej. Jornada suspendida por lluvia"></label>
+  <label class="full">Texto<textarea data-av="x" placeholder="Escribe el aviso. Puedes dejarlo vacío si solo subes una imagen.">${esc(d.x)}</textarea></label>
+  ${assets?'<label>Imagen (opcional)<input type="file" id="avImg" accept="image/*"></label>':''}
+  <label class="chk"><input type="checkbox" data-av="fijo" ${d.fijo?'checked':''}> Fijar hasta arriba</label></div>
+  ${img?`<div class="avprev"><img src="${esc(img)}" alt="Imagen del aviso"><button class="btn" data-avnoimg="1">Quitar imagen</button></div>`:''}
+  <p class="note">Usa <code>**texto**</code> para negritas. Los enlaces se pueden tocar.</p>
+  <div class="acts"><button class="btn pri" data-avpub="1" ${S.avBusy?'disabled':''}>${S.avBusy?'Publicando…':ed?'Guardar cambios':'Publicar aviso'}</button>${ed||d.t||d.x||S.avF?'<button class="btn" data-avcancel="1">Cancelar</button>':''}</div>
+  ${S.msg?`<p class="ok-msg">${esc(S.msg)}</p>`:''}</section>`}
+function avCard(a){const tit=a.t||'Aviso',img=avOk(a.img);
+  return `<article class="av${a.fijo?' fijo':''}"><div class="avh"><h3>${a.fijo?'<span class="pin">Fijado</span>':''}${esc(tit)}</h3><small>${fmtTs(a.ts)}</small></div>
+  ${a.x?`<div class="tx">${avTxt(a.x)}</div>`:''}
+  ${img?`<a class="im" href="${esc(img)}" target="_blank" rel="noopener"><img src="${esc(img)}" alt="${esc(tit)}" loading="lazy"></a>`:''}
+  <div class="acts"><button class="btn" data-avsh="${esc(a.id)}">Compartir</button>${canW?`<button class="btn" data-ave="${esc(a.id)}">Editar</button><button class="btn" data-avfix="${esc(a.id)}">${a.fijo?'Desfijar':'Fijar arriba'}</button><button class="btn ${S.avDel===a.id?'pri':''}" data-avdel="${esc(a.id)}">${S.avDel===a.id?'Toca otra vez para borrar':'Borrar'}</button>`:''}</div></article>`}
+function vAvisos(){const L=avList();avMark();
+  return `<div class="avs">${canW?avForm():''}${L.map(avCard).join('')||`<p class="empty">Todavía no hay avisos.${canW?'':' Aquí se publicarán suspensiones por lluvia, cambios de horario y anuncios del torneo.'}</p>`}</div>`}
+async function achica(f,max=1600){if(!/^image\/(jpe?g|png|webp|heic|heif)$/i.test(f.type||''))return f;
+  try{const bmp=await createImageBitmap(f,{imageOrientation:'from-image'});const r=Math.min(1,max/Math.max(bmp.width,bmp.height));if(r===1&&f.size<900e3){bmp.close&&bmp.close();return f}
+    const c=document.createElement('canvas');c.width=Math.round(bmp.width*r);c.height=Math.round(bmp.height*r);const x=c.getContext('2d');x.fillStyle='#fff';x.fillRect(0,0,c.width,c.height);x.drawImage(bmp,0,0,c.width,c.height);bmp.close&&bmp.close();
+    const b=await new Promise(ok=>c.toBlob(ok,'image/jpeg',.86));if(!b||b.size>=f.size)return f;return new File([b],String(f.name||'aviso').replace(/\.\w+$/,'')+'.jpg',{type:'image/jpeg'})}catch(e){return f}}
+async function avClick(ds){
+  if(ds.goav){location.hash='avisos';return true}
+  if(ds.avsh){const a=S.av[ds.avsh];if(!a)return true;const url=location.origin+location.pathname.replace(/admin\.html$/,'')+'#avisos';const text=[a.t,a.x].filter(Boolean).join('\n');
+    try{if(navigator.share){await navigator.share({title:a.t||'Aviso del torneo',text,url})}else{await navigator.clipboard.writeText((text?text+'\n\n':'')+url);setSt('Aviso copiado. Ya lo puedes pegar en WhatsApp.');setTimeout(()=>setSt(''),4000)}}catch(e){}return true}
+  if(!canW)return false;
+  if(ds.avpub){const d=S.avD,ed=S.avE&&S.av[S.avE];let img=S.avF?'':(ed&&!d.noImg?avOk(ed.img):'');
+    if(!String(d.t).trim()&&!String(d.x).trim()&&!img&&!S.avF){S.msg='Escribe algo o agrega una imagen.';render();return true}
+    S.avBusy=true;S.msg='';render();
+    try{if(S.avF)img=(await assets.upload(S.avF.blob,'avisos')).url;
+      const id=S.avE||('a'+Date.now().toString(36));const o={t:String(d.t).trim(),x:String(d.x).trim(),img,fijo:!!d.fijo,ts:ed?(ed.ts||Date.now()):Date.now()};if(ed)o.edit=Date.now();
+      await db.doc(`torneos/${S.tid}/avisos/${id}`).set(o);S.av[id]=o;S.msg=ed?'Aviso actualizado.':'Aviso publicado.';avReset()}catch(err){S.msg='';fail(err)}
+    S.avBusy=false;render();return true}
+  if(ds.avcancel){avReset();S.msg='';render();return true}
+  if(ds.avnoimg){if(S.avF){URL.revokeObjectURL(S.avF.url);S.avF=null}else S.avD.noImg=true;render();return true}
+  if(ds.ave){const a=S.av[ds.ave];if(!a)return true;avReset();S.avE=ds.ave;S.avD={t:a.t||'',x:a.x||'',fijo:!!a.fijo};S.msg='';render();const v=$('view');scrollTo({top:Math.max(0,v.getBoundingClientRect().top+scrollY-80)});return true}
+  if(ds.avfix){const a=S.av[ds.avfix];if(!a)return true;try{await db.doc(`torneos/${S.tid}/avisos/${ds.avfix}`).update({fijo:!a.fijo})}catch(err){fail(err)}return true}
+  if(ds.avdel){if(S.avDel!==ds.avdel){S.avDel=ds.avdel;render();return true}const id=ds.avdel;S.avDel='';if(S.avE===id)avReset();
+    try{await db.doc(`torneos/${S.tid}/avisos/${id}`).delete();delete S.av[id];S.msg='Aviso borrado.';render()}catch(err){fail(err)}return true}
+  return false}
+$('view').addEventListener('input',e=>{const k=e.target.dataset.av;if(k)S.avD[k]=e.target.type==='checkbox'?e.target.checked:e.target.value});
+
 // ---------- organizar ----------
 const TF=[['edicion','Edición (ej. XXXI)'],['nombre','Nombre (ej. Torneo Challenger)'],['subtitulo','Subtítulo pequeño (ej. de tenis)'],['fechasTxt','Fechas como texto (ej. 23 Nov – 05 Dic)'],['inicio','Primer día','date'],['fin','Último día','date'],['sede','Sede'],['lema','Lema o club'],['contacto','Contacto de inscripciones'],['telefono','Teléfono']];
 function vOrg(){if(!canW)return '<p class="empty">Solo quien edita puede organizar.</p>';const t=S.T[S.tid]||{};
@@ -327,11 +408,13 @@ function header(){const t=S.T[S.tid]||{};$('hEd').textContent=t.edicion||'';{con
   document.title=((t.edicion?t.edicion+' ':'')+(t.nombre||'Torneo')).slice(0,40);
   let tot=0,pl=0;for(const k of Object.keys(S.C)){const mm=M(k);tot+=mm.GM.length;pl+=mm.GM.filter(m=>outcome(eff(mm,m))).length}
   $('pn').textContent=tot?`${pl} de ${tot} partidos de grupo jugados`:'Sin partidos cargados';$('pm').style.width=(tot?pl/tot*100:0)+'%';
+  {const ta=document.querySelector('.tab[data-v="avisos"]');if(ta){const n=S.view==='avisos'?0:avNuevos().length,h2='<span>Avisos</span>'+(n?`<i class="nb" aria-label="${n} nuevos">${n}</i>`:'');if(ta.innerHTML!==h2)ta.innerHTML=h2}}
   $('tabOrg').hidden=!canW;document.querySelectorAll('.tab').forEach(b=>b.setAttribute('aria-current',b.dataset.v===S.view))}
 function render(){MC={};try{header();let h='';
-    if(S.view==='conv')h=vConv();else if(S.view==='org')h=vOrg();
-    else{S.mod=S.view;const mm=M();h=subnav()+(S.sub==='grupos'?vGrupos(mm):S.sub==='llaves'?vLlaves(mm):S.sub==='jugadores'?vJugadores(mm):vPartidos(mm))}
-    $('view').innerHTML=h}catch(e){console.error(e);$('view').innerHTML='<p class="empty">Algo salió mal al dibujar esta vista. Recarga la página.</p>'}}
+    if(S.view==='conv')h=vConv();else if(S.view==='org')h=vOrg();else if(S.view==='avisos')h=vAvisos();
+    else{S.mod=S.view;const mm=M();h=avBanner()+subnav()+(S.sub==='grupos'?vGrupos(mm):S.sub==='llaves'?vLlaves(mm):S.sub==='jugadores'?vJugadores(mm):vPartidos(mm))}
+    const ae=document.activeElement,v0=$('view');let fk=null;if(ae&&v0.contains(ae)&&/^(INPUT|TEXTAREA)$/.test(ae.tagName)&&ae.type!=='file'&&ae.type!=='checkbox'&&(ae.id||ae.dataset.av))fk={q:ae.id?'#'+ae.id:`[data-av="${ae.dataset.av}"]`,v:ae.value,s:ae.selectionStart,e:ae.selectionEnd};
+    v0.innerHTML=h;if(fk){const n=v0.querySelector(fk.q);if(n){n.value=fk.v;n.focus({preventScroll:true});try{n.setSelectionRange(fk.s,fk.e)}catch(x){}}}}catch(e){console.error(e);$('view').innerHTML='<p class="empty">Algo salió mal al dibujar esta vista. Recarga la página.</p>'}}
 
 // ---------- diálogo de partido ----------
 let cur=null;
@@ -408,6 +491,7 @@ $('jDel').onclick=()=>{if($('jDel').textContent==='Eliminar'){$('jDel').textCont
 
 // ---------- eventos ----------
 $('view').addEventListener('click',async e=>{const b=e.target.closest('button');if(!b)return;const ds=b.dataset;
+  if(await avClick(ds))return;
   if(ds.rama){S.verJ='';S.rama=ds.rama;S.fecha='';S.cat='';S.fcat='';S.edG='';location.hash=hashOf();return}
   if(ds.sub){S.sub=ds.sub;S.edG='';S.verJ='';render();return}
   if(ds.vj!==undefined){S.verJ=ds.vj;render();const bar=document.querySelector('.bar');if(bar&&window.scrollY>bar.offsetTop)scrollTo({top:bar.offsetTop});return}
@@ -441,6 +525,8 @@ $('view').addEventListener('click',async e=>{const b=e.target.closest('button');
   if(b.id==='oImp'){b.disabled=true;b.textContent='Importando…';try{const n=await aplicarImport(S.imp);S.imp=null;S.msg=`Listo: ${n} registros importados.`;render()}catch(err){fail(err)}return}
 });
 $('view').addEventListener('change',async e=>{const t=e.target,k=K();
+  if(t.dataset.av){S.avD[t.dataset.av]=t.type==='checkbox'?t.checked:t.value;return}
+  if(t.id==='avImg'&&t.files[0]){try{const f=await achica(t.files[0]);if(S.avF)URL.revokeObjectURL(S.avF.url);S.avF={blob:f,url:URL.createObjectURL(f)};S.avD.noImg=false;S.msg=''}catch(err){S.msg='No pude leer esa imagen.'}render();return}
   if(t.id==='tam'){mut(k,d=>{d.llaves[ckey(S.cat)]={tam:+t.value,sem:null}});return}
   if(t.dataset.s!==undefined){const mm=M(k),{sl}=slots(mm,S.cat);const arr=sl.map(x=>x?x.e:'');arr[+t.dataset.s]=t.value;upd(k,{llaves:{[ckey(S.cat)]:{tam:arr.length,sem:arr}}});return}
   if(t.dataset.slot!==undefined){const gid=t.closest('[data-g]').dataset.g,i=+t.dataset.slot,v=t.value;
@@ -449,24 +535,25 @@ $('view').addEventListener('change',async e=>{const t=e.target,k=K();
   if(t.id==='oFile'&&t.files.length){S.msg='';try{S.imp=await leerArchivos([...t.files])}catch(err){S.imp={by:{},warn:['No pude leer el archivo. Si es Excel, revisa tu conexión (se descarga un lector) o guárdalo como CSV.']}}render();return}
   if(t.id==='oPost'&&t.files[0]){try{const a=await assets.upload(t.files[0]);await db.doc('torneos/'+S.tid).update({poster:a.url});S.msg='Póster actualizado.';render()}catch(err){setSt('No se pudo subir el póster.')}return}
 });
-$('tabs').addEventListener('click',e=>{const b=e.target.closest('.tab');if(!b)return;const v=b.dataset.v;if(v==='S'||v==='D'){S.view=v;S.mod=v;S.fecha='';S.cat='';S.fcat=''}location.hash=v==='conv'?'convocatoria':v==='org'?'organizar':(v==='S'?'singles':'dobles')+'-'+(S.rama==='F'?'femenil':'varonil')});
+$('tabs').addEventListener('click',e=>{const b=e.target.closest('.tab');if(!b)return;const v=b.dataset.v;if(v==='S'||v==='D'){S.view=v;S.mod=v;S.fecha='';S.cat='';S.fcat=''}location.hash=v==='avisos'?'avisos':v==='conv'?'convocatoria':v==='org'?'organizar':(v==='S'?'singles':'dobles')+'-'+(S.rama==='F'?'femenil':'varonil')});
 const hashOf=()=>(S.mod==='S'?'singles':'dobles')+'-'+(S.rama==='F'?'femenil':'varonil');
 function route(){const h=location.hash.slice(1);let m;
-  if(h==='convocatoria')S.view='conv';else if(h==='organizar')S.view='org';
+  if(h==='avisos')S.view='avisos';else if(h==='convocatoria')S.view='conv';else if(h==='organizar')S.view='org';
   else if((m=h.match(/^(singles|dobles)-(varonil|femenil)$/))){S.view=S.mod=m[1]==='singles'?'S':'D';S.rama=m[2]==='femenil'?'F':'V'}
   else{S.view=S.mod}
   S.edG='';render()}
 addEventListener('hashchange',route);
-let qt;$('q').addEventListener('input',e=>{clearTimeout(qt);qt=setTimeout(()=>{S.q=e.target.value.trim();try{localStorage.setItem('cct-q',S.q)}catch(x){}if(S.view==='conv'||S.view==='org'){location.hash=hashOf();return}render()},150)});
+let qt;$('q').addEventListener('input',e=>{clearTimeout(qt);qt=setTimeout(()=>{S.q=e.target.value.trim();try{localStorage.setItem('cct-q',S.q)}catch(x){}if(S.view==='conv'||S.view==='org'||S.view==='avisos'){location.hash=hashOf();return}render()},150)});
 $('qx').onclick=()=>{$('q').value='';S.q='';try{localStorage.removeItem('cct-q')}catch(x){}render()};
 route();
 
 // ---------- datos ----------
 let un=[],tmr=null;
-function selTorneo(id){un.forEach(f=>{try{f()}catch(e){}});un=[];S.tid=id;S.C={};S.R={};MC={};render();if(!id)return;let ok=0;
+function selTorneo(id){un.forEach(f=>{try{f()}catch(e){}});un=[];S.tid=id;S.C={};S.R={};S.av={};avReset();MC={};render();if(!id)return;let ok=0;
   const done=()=>{if(++ok>=2){clearTimeout(tmr);setSt('')}};clearTimeout(tmr);tmr=setTimeout(()=>{if(ok<2)setSt('Todavía no se pueden cargar los datos; lo que ves puede estar incompleto.')},10000);
   un.push(db.collection(`torneos/${id}/cuadros`).onSnapshot(s=>{const n={};s.docs.forEach(d=>{n[d.id]=d.data()});S.C=n;if(!s.metadata.fromCache)done();render()},err=>{setSt('No se pudieron cargar los cuadros.')}));
-  un.push(db.collection(`torneos/${id}/res`).onSnapshot(s=>{const n={};s.docs.forEach(d=>{n[d.id]=d.data()});S.R=n;if(!s.metadata.fromCache)done();render()},err=>{setSt('No se pudieron cargar los resultados.')}))}
+  un.push(db.collection(`torneos/${id}/res`).onSnapshot(s=>{const n={};s.docs.forEach(d=>{n[d.id]=d.data()});S.R=n;if(!s.metadata.fromCache)done();render()},err=>{setSt('No se pudieron cargar los resultados.')}));
+  un.push(db.collection(`torneos/${id}/avisos`).onSnapshot(s=>{const n={};s.docs.forEach(d=>{n[d.id]=d.data()});if(JSON.stringify(n)===JSON.stringify(S.av))return;S.av=n;render()},()=>{}))}
 function pickT(){let t='';if(canW){try{t=localStorage.getItem('cct-tid')||''}catch(e){}}
   if(!S.T[t])t=S.app.activo;if(!S.T[t])t=Object.keys(S.T).sort((a,b)=>(S.T[b].creado||0)-(S.T[a].creado||0))[0]||'';
   if(t!==S.tid)selTorneo(t);else render()}
@@ -494,7 +581,7 @@ const colApi=p=>({path:p,doc:id=>docApi(p+'/'+id),onSnapshot:(fn,err)=>listen('c
 
 // descargas y póster
 dl={save:async({filename,data})=>{const u=URL.createObjectURL(data);const a=document.createElement('a');a.href=u;a.download=filename;document.body.appendChild(a);a.click();a.remove();setTimeout(()=>URL.revokeObjectURL(u),5000);return{status:'saved'}}};
-assets={upload:async f=>{const ext=((f.name||'').split('.').pop()||'jpg').toLowerCase().replace(/[^a-z0-9]/g,'');const path=`posters/${S.tid}-${Date.now()}.${ext}`;
+assets={upload:async(f,dir='posters')=>{const ext=((f.name||'').split('.').pop()||'jpg').toLowerCase().replace(/[^a-z0-9]/g,'');const path=`${dir}/${S.tid}-${Date.now()}.${ext}`;
   const{error}=await sb.storage.from('publico').upload(path,f,{upsert:true,contentType:f.type||undefined});if(error)throw error;return{url:sb.storage.from('publico').getPublicUrl(path).data.publicUrl}}};
 
 // acceso
