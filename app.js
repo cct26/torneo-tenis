@@ -270,7 +270,7 @@ function avCard(a){const tit=a.t||'Aviso',img=avOk(a.img);
   return `<article class="av${a.fijo?' fijo':''}"><div class="avh"><h3>${a.fijo?'<span class="pin">Fijado</span>':''}${esc(tit)}</h3><small>${fmtTs(a.ts)}</small></div>
   ${a.x?`<div class="tx">${avTxt(a.x)}</div>`:''}
   ${img?`<a class="im" href="${esc(img)}" target="_blank" rel="noopener"><img src="${esc(img)}" alt="${esc(tit)}" loading="lazy"></a>`:''}
-  <div class="acts"><button class="btn" data-avsh="${esc(a.id)}">Compartir</button>${canW?`<button class="btn" data-ave="${esc(a.id)}">Editar</button><button class="btn" data-avfix="${esc(a.id)}">${a.fijo?'Desfijar':'Fijar arriba'}</button><button class="btn ${S.avDel===a.id?'pri':''}" data-avdel="${esc(a.id)}">${S.avDel===a.id?'Toca otra vez para borrar':'Borrar'}</button>`:''}</div></article>`}
+  ${canW?`<div class="acts"><button class="btn" data-avsh="${esc(a.id)}">Compartir</button><button class="btn" data-ave="${esc(a.id)}">Editar</button><button class="btn" data-avfix="${esc(a.id)}">${a.fijo?'Desfijar':'Fijar arriba'}</button><button class="btn ${S.avDel===a.id?'pri':''}" data-avdel="${esc(a.id)}">${S.avDel===a.id?'Toca otra vez para borrar':'Borrar'}</button></div>`:''}</article>`}
 function vAvisos(){const L=avList();avMark();
   return `<div class="avs">${canW?avForm():''}${L.map(avCard).join('')||`<p class="empty">Todavía no hay avisos.${canW?'':' Aquí se publicarán suspensiones por lluvia, cambios de horario y anuncios del torneo.'}</p>`}</div>`}
 async function achica(f,max=1600){if(!/^image\/(jpe?g|png|webp|heic|heif)$/i.test(f.type||''))return f;
