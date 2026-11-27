@@ -244,7 +244,13 @@ Object.assign(S,{av:{},avE:'',avD:{t:'',x:'',fijo:false},avF:null,avDel:'',avBus
 .form label.chk{display:flex;align-items:center;gap:10px;min-height:44px}
 .form label.chk input{width:22px;height:22px;min-height:22px;padding:0;accent-color:var(--mag)}
 .avprev{margin-top:10px;display:flex;flex-wrap:wrap;align-items:flex-end;gap:10px}
-.avprev img{max-width:220px;max-height:220px;border-radius:10px;display:block}`;document.head.appendChild(st)})();
+.avprev img{max-width:220px;max-height:220px;border-radius:10px;display:block}
+header.conban{padding:0;background:#0d1240}
+header.conban::before{display:block;content:"";position:absolute;inset:-30px;height:auto;background:var(--banurl) center/cover;filter:blur(26px) brightness(.5);transform:none;opacity:1}
+header.conban .hw,header.conban .cc{display:none}
+header.conban .banimg{position:relative;display:block;width:min(100%,760px);height:auto;margin:0 auto}
+header.conban .club{margin:0 auto;padding:10px max(4vw,16px) 12px;justify-content:center}
+.banprev{display:block;width:100%;max-width:340px;border-radius:10px;margin:6px 0 4px}`;document.head.appendChild(st)})();
 const fmtTs=ts=>{const d=new Date(ts||0);return `${DOW[d.getDay()]} ${d.getDate()} ${MES[d.getMonth()]} · ${String(d.getHours()).padStart(2,'0')}:${String(d.getMinutes()).padStart(2,'0')}`};
 const avTxt=s=>esc(s).replace(/\*\*(.+?)\*\*/g,'<strong>$1</strong>').replace(/https?:\/\/[^\s<]+/g,u=>`<a href="${u}" target="_blank" rel="noopener">${u}</a>`);
 const avOk=u=>/^https:\/\//.test(u||'')?u:'';
@@ -317,6 +323,7 @@ function vOrg(){if(!canW)return '<p class="empty">Solo quien edita puede organiz
    <div class="drop"><input type="file" id="oFile" accept=".xlsx,.xls,.csv,.txt" multiple aria-label="Archivo Excel o CSV"></div>
    <div class="acts">${dl?'<button class="btn" id="oTpl">Descargar plantilla</button><button class="btn" id="oExp">Exportar este torneo a Excel</button>':''}</div>
    ${imp?impPreview(imp):''}</section>
+  <section class="box"><h2>Banner principal</h2><p class="note">Imagen que aparece hasta arriba de la página en lugar del encabezado con el nombre del torneo. Se ve mejor una imagen horizontal.</p>${t.banner?`<img class="banprev" src="${esc(t.banner)}" alt="Banner actual">`:''}<div class="form">${assets?'<label>Subir imagen<input type="file" id="oBan" accept="image/*"></label>':''}</div>${t.banner?'<div class="acts"><button class="btn" id="oBanDel">Quitar banner</button></div>':''}</section>
   <section class="box"><h2>Convocatoria</h2><div class="form"><label class="full">Texto<textarea id="oConv">${esc(t.convocatoria||'')}</textarea></label></div>
    <p class="note">Formato: <code>## Título</code> abre una sección · <code>- texto</code> viñeta · <code>&gt; valor | etiqueta</code> dato grande · <code>**negritas**</code>.</p>
    <div class="form">${assets?'<label>Póster (imagen)<input type="file" id="oPost" accept="image/*"></label>':''}</div>
@@ -407,6 +414,8 @@ async function libro(conDatos){const X=await loadXLSX();const wb=X.utils.book_ne
 function header(){const t=S.T[S.tid]||{};$('hEd').textContent=t.edicion||'';{const w=String(t.nombre||'Torneo').trim().split(/\s+/),first=w.shift(),rest=w.join(' ');$('hNom').closest('h1').innerHTML=`<span id="hNom">${esc(first)}</span>${t.subtitulo?`<span class="dt" id="hSub">${esc(t.subtitulo)}</span>`:'<span id="hSub"></span>'}${rest?'<br>'+esc(rest):''}`}
   $('hFe').textContent=t.fechasTxt||'';$('hFe').hidden=!t.fechasTxt;$('hSede').textContent=[t.sede,t.lema].filter(Boolean).join(' · ');
   document.title=((t.edicion?t.edicion+' ':'')+(t.nombre||'Torneo')).slice(0,40);
+  {const ban=t.banner&&(/^https:\/\//.test(t.banner)||/^[\w.-]+\.(jpe?g|png|webp)$/i.test(t.banner))?t.banner:'',hd=document.querySelector('header');let bi=$('hBan');hd.classList.toggle('conban',!!ban);
+   if(ban){if(!bi){bi=document.createElement('img');bi.id='hBan';bi.className='banimg';hd.insertBefore(bi,hd.firstChild)}if(bi.getAttribute('src')!==ban){bi.src=ban;hd.style.setProperty('--banurl',`url("${ban.replace(/["\\]/g,'')}")`)}bi.alt=[t.edicion,t.nombre,t.fechasTxt].filter(Boolean).join(' · ')}else if(bi){bi.remove();hd.style.removeProperty('--banurl')}}
   let tot=0,pl=0;for(const k of Object.keys(S.C)){const mm=M(k);tot+=mm.GM.length;pl+=mm.GM.filter(m=>outcome(eff(mm,m))).length}
   $('pn').textContent=tot?`${pl} de ${tot} partidos de grupo jugados`:'Sin partidos cargados';$('pm').style.width=(tot?pl/tot*100:0)+'%';
   {const ta=document.querySelector('.tab[data-v="avisos"]');if(ta){const n=S.view==='avisos'?0:avNuevos().length,h2='<span>Avisos</span>'+(n?`<i class="nb" aria-label="${n} nuevos">${n}</i>`:'');if(ta.innerHTML!==h2)ta.innerHTML=h2}}
@@ -517,6 +526,7 @@ $('view').addEventListener('click',async e=>{const b=e.target.closest('button');
   if(b.id==='oAct'){try{await db.doc('config/app').set({...S.app,activo:S.tid})}catch(err){fail(err)}return}
   if(b.id==='oSave'){const fd=new FormData($('oDat')),o={};TF.forEach(([f])=>o[f]=String(fd.get(f)||'').trim());try{await db.doc('torneos/'+S.tid).update(o);S.msg='Datos guardados.';render()}catch(err){fail(err)}return}
   if(b.id==='oConvOk'){try{await db.doc('torneos/'+S.tid).update({convocatoria:$('oConv').value});S.msg='Convocatoria guardada.';render()}catch(err){fail(err)}return}
+  if(b.id==='oBanDel'){try{await db.doc('torneos/'+S.tid).update({banner:''});S.msg='Banner quitado.';render()}catch(err){fail(err)}return}
   if(b.id==='oPostDel'){try{await db.doc('torneos/'+S.tid).update({poster:''});render()}catch(err){fail(err)}return}
   if(b.id==='oCreate'){const fd=new FormData($('oNew')),o={};TF.slice(0,8).forEach(([f])=>o[f]=String(fd.get(f)||'').trim());if(!o.nombre){S.msg='Ponle nombre al torneo.';render();return}
     const id=slug((o.edicion?o.edicion+' ':'')+o.nombre)+'-'+Date.now().toString(36);o.creado=Date.now();
@@ -534,6 +544,7 @@ $('view').addEventListener('change',async e=>{const t=e.target,k=K();
     mut(k,d=>{if(v)for(const g of Object.values(d.grupos)){const j=g.m.indexOf(v);if(j>=0)g.m[j]=''}d.grupos[gid].m[i]=v});return}
   if(t.id==='oSel'){try{localStorage.setItem('cct-tid',t.value)}catch(x){}selTorneo(t.value);return}
   if(t.id==='oFile'&&t.files.length){S.msg='';try{S.imp=await leerArchivos([...t.files])}catch(err){S.imp={by:{},warn:['No pude leer el archivo. Si es Excel, revisa tu conexión (se descarga un lector) o guárdalo como CSV.']}}render();return}
+  if(t.id==='oBan'&&t.files[0]){setSt('Subiendo banner…');try{const f=await achica(t.files[0],2000);const a=await assets.upload(f,'banners');await db.doc('torneos/'+S.tid).update({banner:a.url});setSt('');S.msg='Banner actualizado.';render()}catch(err){setSt('No se pudo subir el banner.')}return}
   if(t.id==='oPost'&&t.files[0]){try{const a=await assets.upload(t.files[0]);await db.doc('torneos/'+S.tid).update({poster:a.url});S.msg='Póster actualizado.';render()}catch(err){setSt('No se pudo subir el póster.')}return}
 });
 $('tabs').addEventListener('click',e=>{const b=e.target.closest('.tab');if(!b)return;const v=b.dataset.v;if(v==='juego'){location.href='juego.html';return}if(v==='S'||v==='D'){S.view=v;S.mod=v;S.fecha='';S.cat='';S.fcat=''}location.hash=v==='avisos'?'avisos':v==='conv'?'convocatoria':v==='org'?'organizar':(v==='S'?'singles':'dobles')+'-'+(S.rama==='F'?'femenil':'varonil')});
