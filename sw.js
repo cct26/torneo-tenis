@@ -1,6 +1,6 @@
 // Service worker: permite instalar la página como app y abrirla aunque falle la señal.
 // Siempre intenta traer la versión más nueva; si no hay conexión usa la última guardada.
-const CACHE = 'torneo-v1';
+const CACHE = 'torneo-v2';
 const BASE = ['./', 'index.html', 'admin.html', 'app.js', 'config.js', 'juego.html', 'icon-192.png'];
 
 self.addEventListener('install', e => {
@@ -36,4 +36,27 @@ self.addEventListener('fetch', e => {
       return res;
     })));
   }
+});
+
+// Notificaciones push de avisos
+self.addEventListener('push', e => {
+  let d = {};
+  try { d = e.data ? e.data.json() : {}; } catch (x) { d = { body: e.data ? e.data.text() : '' }; }
+  const opts = { body: d.body || '', icon: 'icon-192.png', tag: d.tag || 'aviso', renotify: true, data: { url: d.url || './#avisos' } };
+  if (d.image) opts.image = d.image;
+  e.waitUntil(self.registration.showNotification(d.title || 'Aviso del torneo', opts));
+});
+
+self.addEventListener('notificationclick', e => {
+  e.notification.close();
+  const destino = new URL((e.notification.data && e.notification.data.url) || './#avisos', self.registration.scope).href;
+  e.waitUntil(clients.matchAll({ type: 'window', includeUncontrolled: true }).then(cs => {
+    for (const c of cs) {
+      if (c.url.startsWith(self.registration.scope) && 'focus' in c) {
+        const u = c.url.split('#')[0] + '#avisos';
+        return c.focus().then(w => (w && w.navigate ? w.navigate(u) : w)).catch(() => {});
+      }
+    }
+    return clients.openWindow(destino);
+  }));
 });
