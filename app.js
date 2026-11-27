@@ -134,9 +134,9 @@ function vPartidos(mm){const KM=koMatches(mm,true);const all=[...mm.GM,...KM].fi
     return `<button class="chip" data-fecha="${esc(f)}" aria-current="${f===S.fecha}">${f==='__lluvia'?'Por reprogramar':fmtF(f)}<small>${f==='__lluvia'?set.length:(p?p+' pend.':'✓')}</small></button>`}).join('')+'</div>';
   ms=S.fecha==='__lluvia'?lluvia:all.filter(m=>m.f===S.fecha&&!m.st);
   ms.sort((x,y)=>(x.h||'99').localeCompare(y.h||'99')||mm.cs.indexOf(x.cat)-mm.cs.indexOf(y.cat)||(x.n||0)-(y.n||0));
-  if(S.fecha==='__lluvia')return head+`<div class="list">${ms.map(m=>rowMatch(mm,m,true)).join('')}</div>`;
+  if(S.fecha==='__lluvia')return head+llPanel()+`<div class="list">${ms.map(m=>rowMatch(mm,m,true)).join('')}</div>`;
   const grp=[];for(const m of ms){let g=grp.find(x=>x.h===m.h);if(!g)grp.push(g={h:m.h,ms:[]});g.ms.push(m)}
-  return head+grp.map(g=>`<section class="slot"><div class="hr">${g.h||'––'}</div><div class="list">${g.ms.map(m=>rowMatch(mm,m,false)).join('')}</div></section>`).join('')}
+  return head+llPanel()+grp.map(g=>`<section class="slot"><div class="hr">${g.h||'––'}</div><div class="list">${g.ms.map(m=>rowMatch(mm,m,false)).join('')}</div></section>`).join('')}
 
 function cardGrupo(mm,g){const t=tabla(mm,g),c=clasif(mm,g.cat),qn=new Set(c.list.map(x=>x.e));const ed=canW&&S.edG===g.id;
   const pj=g.ms.filter(m=>outcome(eff(mm,m))).length;
@@ -331,6 +331,53 @@ $('view').addEventListener('input',e=>{const k=e.target.dataset.av;if(k)S.avD[k]
       :'<ol><li>Abre el menú del navegador (<b>⋮</b>, arriba a la derecha).</li><li>Elige <b>Instalar app</b> o <b>Agregar a pantalla de inicio</b>.</li></ol><p>En computadora también puedes usar el ícono de instalar que aparece a la derecha de la barra de dirección en Chrome o Edge.</p>')
       +'<div class="acts"><button class="btn pri" type="button" id="dInstOk">Entendido</button></div>';
     $('dInstOk').onclick=()=>d.close();d.showModal()})})();
+
+// ---------- lluvia en bloque ----------
+Object.assign(S,{llOpen:false,llX:[],llBoth:false,llF:'',llMsg:'',llUndo:null,llAv:null});
+(()=>{const st=document.createElement('style');st.textContent=`
+.llbox h2{margin-bottom:6px}
+.llhs{display:flex;flex-wrap:wrap;gap:8px;margin:10px 0}
+.llh{display:inline-flex;align-items:center;gap:8px;min-height:44px;padding:6px 14px;border:2px solid var(--line);border-radius:999px;background:var(--card);font-weight:700;cursor:pointer}
+.llh input{width:20px;height:20px;accent-color:var(--mag);margin:0}
+.llh small{font-weight:500;color:var(--mut)}
+.llmsg{display:flex;flex-wrap:wrap;align-items:center;gap:8px 12px}`;document.head.appendChild(st)})();
+const LLDIA=['Domingo','Lunes','Martes','Miércoles','Jueves','Viernes','Sábado'],LLMES=['enero','febrero','marzo','abril','mayo','junio','julio','agosto','septiembre','octubre','noviembre','diciembre'];
+const llRn=r=>r==='V'?'Varonil':'Femenil';
+const llY=a=>a.length>1?a.slice(0,-1).join(', ')+' y '+a[a.length-1]:(a[0]||'');
+function llCands(f){const ks=[K()];if(S.llBoth)ks.push(S.mod+(S.rama==='V'?'F':'V'));
+  return ks.flatMap(k=>{if(!S.C[k])return[];const mm=M(k);return[...mm.GM,...koMatches(mm,true)].filter(m=>m.f===f&&!m.st&&!outcome(eff(mm,m)))})}
+function llPanel(){if(!canW)return'';const f=S.fecha;if(S.llF!==f){S.llOpen=false;S.llX=[];S.llF=f}
+  let h=S.llMsg?`<div class="ok-msg llmsg"><span>${esc(S.llMsg)}</span>${S.llUndo?'<button class="btn" data-llundo="1">Deshacer</button>':''}${S.llAv?'<button class="btn pri" data-llav="1">Publicar aviso</button>':''}</div>`:'';
+  if(!f||f==='__lluvia')return h;
+  if(!S.llOpen)return h+'<div class="tools"><button class="btn" data-llopen="1">Suspender por lluvia…</button></div>';
+  const c=llCands(f),hs=[...new Set(c.map(m=>m.h||''))].sort();
+  const sel=c.filter(m=>!S.llX.includes(m.h||'')),otro=S.rama==='V'?'F':'V';
+  return h+`<section class="box llbox"><h2>Suspender por lluvia · ${fmtF(f)}</h2>
+  ${hs.length?`<p class="note">Marca los horarios que se suspenden. Solo se toman los partidos que aún no tienen resultado; pasan a “Por reprogramar”.</p>
+  <div class="llhs">${hs.map(x=>{const n=c.filter(m=>(m.h||'')===x).length;return`<label class="llh"><input type="checkbox" data-llh="${esc(x)}" ${S.llX.includes(x)?'':'checked'}>${x?esc(x)+' hrs':'Sin hora'} <small>${n} partido${n===1?'':'s'}</small></label>`}).join('')}</div>`:'<p class="note">No hay partidos pendientes este día.</p>'}
+  <label class="llh"><input type="checkbox" data-llboth="1" ${S.llBoth?'checked':''}>Incluir también ${llRn(otro)}</label>
+  <p class="note">Aplica a ${S.llBoth?'Varonil y Femenil':llRn(S.rama)} de ${S.mod==='D'?'Dobles':'Singles'}, todas las categorías.</p>
+  <div class="acts"><button class="btn pri" data-llgo="1" ${sel.length?'':'disabled'}>Suspender ${sel.length} partido${sel.length===1?'':'s'}</button><button class="btn" data-llcancel="1">Cancelar</button></div></section>`}
+function llWrite(list,st){const by={};for(const m of list){const o=by[m.k]||(by[m.k]={});const coll=m.ko?'ko':'partidos';o[coll]=o[coll]||{};
+    const full={f:m.f,h:m.h,c:m.cn,st,rep:!!m.rep};if(!m.ko){full.g=m.g;full.a=m.a;full.b=m.b}o[coll][m.pid]=full}
+  return Promise.all(Object.entries(by).map(([k,o])=>upd(k,o)))}
+function llChange(t){if(t.dataset.llh!==undefined){const x=t.dataset.llh;S.llX=t.checked?S.llX.filter(y=>y!==x):[...new Set([...S.llX,x])];render();return true}
+  if(t.dataset.llboth){S.llBoth=t.checked;render();return true}return false}
+async function llClick(ds){if(!canW)return false;
+  if(ds.llopen){S.llOpen=true;S.llX=[];S.llMsg='';S.llUndo=null;S.llAv=null;render();return true}
+  if(ds.llcancel){S.llOpen=false;render();return true}
+  if(ds.llgo){const f=S.fecha,list=llCands(f).filter(m=>!S.llX.includes(m.h||''));if(!list.length)return true;
+    const hs=[...new Set(list.map(m=>m.h).filter(Boolean))].sort(),ramas=[...new Set(list.map(m=>m.k.slice(-1)))].map(r=>llRn(r).toLowerCase());
+    const prev=list.map(m=>({...m}));S.llOpen=false;
+    S.llMsg=`Se suspendieron ${list.length} partido${list.length===1?'':'s'}${hs.length?' de las '+llY(hs)+' hrs':''}. Quedaron en “Por reprogramar”.`;
+    S.llUndo=prev;S.llAv={f,hs,ramas,mod:S.mod};await llWrite(list,'lluvia');render();return true}
+  if(ds.llundo){const L=S.llUndo;if(!L)return true;S.llUndo=null;S.llAv=null;S.llMsg='Se deshizo la suspensión.';await llWrite(L.map(m=>m),'');
+    for(const m of L)if(m.st)await llWrite([m],m.st);render();return true}
+  if(ds.llav){const a=S.llAv;if(!a)return true;const d=new Date(a.f+'T12:00:00');
+    const dia=`${LLDIA[d.getDay()]} ${d.getDate()} de ${LLMES[d.getMonth()]}`;
+    avReset();S.avD={t:'Partidos suspendidos por lluvia',x:`${dia}: los partidos${a.hs.length?' de las '+llY(a.hs)+' hrs':''} de ${a.mod==='D'?'dobles ':''}la rama ${llY(a.ramas)} quedan suspendidos por lluvia.\nSerán reprogramados; publicaremos las nuevas fechas aquí.`,fijo:false};
+    S.llAv=null;S.llMsg='';S.llUndo=null;location.hash='avisos';return true}
+  return false}
 
 // ---------- organizar ----------
 const TF=[['edicion','Edición (ej. XXXI)'],['nombre','Nombre (ej. Torneo Challenger)'],['subtitulo','Subtítulo pequeño (ej. de tenis)'],['fechasTxt','Fechas como texto (ej. 23 Nov – 05 Dic)'],['inicio','Primer día','date'],['fin','Último día','date'],['sede','Sede'],['lema','Lema o club'],['contacto','Contacto de inscripciones'],['telefono','Teléfono']];
@@ -528,7 +575,7 @@ $('jDel').onclick=()=>{if($('jDel').textContent==='Eliminar'){$('jDel').textCont
 
 // ---------- eventos ----------
 $('view').addEventListener('click',async e=>{const b=e.target.closest('button');if(!b)return;const ds=b.dataset;
-  if(await avClick(ds))return;
+  if(await avClick(ds)||await llClick(ds))return;
   if(ds.rama){S.verJ='';S.rama=ds.rama;S.fecha='';S.cat='';S.fcat='';S.edG='';location.hash=hashOf();return}
   if(ds.sub){S.sub=ds.sub;S.edG='';S.verJ='';render();return}
   if(ds.vj!==undefined){S.verJ=ds.vj;render();const bar=document.querySelector('.bar');if(bar&&window.scrollY>bar.offsetTop)scrollTo({top:bar.offsetTop});return}
@@ -563,6 +610,7 @@ $('view').addEventListener('click',async e=>{const b=e.target.closest('button');
   if(b.id==='oImp'){b.disabled=true;b.textContent='Importando…';try{const n=await aplicarImport(S.imp);S.imp=null;S.msg=`Listo: ${n} registros importados.`;render()}catch(err){fail(err)}return}
 });
 $('view').addEventListener('change',async e=>{const t=e.target,k=K();
+  if(llChange(t))return;
   if(t.dataset.av){S.avD[t.dataset.av]=t.type==='checkbox'?t.checked:t.value;return}
   if(t.id==='avImg'&&t.files[0]){try{const f=await achica(t.files[0]);if(S.avF)URL.revokeObjectURL(S.avF.url);S.avF={blob:f,url:URL.createObjectURL(f)};S.avD.noImg=false;S.msg=''}catch(err){S.msg='No pude leer esa imagen.'}render();return}
   if(t.id==='tam'){mut(k,d=>{d.llaves[ckey(S.cat)]={tam:+t.value,sem:null}});return}
