@@ -305,6 +305,33 @@ async function avClick(ds){
   return false}
 $('view').addEventListener('input',e=>{const k=e.target.dataset.av;if(k)S.avD[k]=e.target.type==='checkbox'?e.target.checked:e.target.value});
 
+// ---------- instalar como app ----------
+(()=>{if('serviceWorker' in navigator)addEventListener('load',()=>navigator.serviceWorker.register('sw.js').catch(()=>{}));
+  const solo=()=>matchMedia('(display-mode: standalone)').matches||navigator.standalone===true;
+  let dp=null;addEventListener('beforeinstallprompt',e=>{e.preventDefault();dp=e});
+  addEventListener('appinstalled',()=>{dp=null;const b=$('btnInst');if(b)b.remove()});
+  if(solo())return;
+  const st=document.createElement('style');st.textContent=`
+.inst{flex:none;border:0;background:var(--mag);color:#fff;font:italic 800 15px Montserrat,sans-serif;padding:8px 16px;min-height:44px;transform:skewX(-8deg);box-shadow:4px 4px 0 #0b2a5a44;cursor:pointer;display:inline-flex;align-items:center}
+.inst span{display:inline-flex;align-items:center;gap:8px;transform:skewX(8deg)}
+.inst svg{width:18px;height:18px}
+.dinst{border:0;border-radius:16px;padding:20px 22px;width:min(92vw,430px);background:var(--card);color:var(--ink);box-shadow:0 20px 50px #0007}
+.dinst::backdrop{background:#000a}
+.dinst h2{font:italic 900 22px Montserrat,sans-serif;color:var(--mag);margin:0 0 6px}
+.dinst ol{padding-left:22px;margin:10px 0}.dinst li{margin:8px 0}.dinst p{margin:8px 0;color:var(--mut)}`;document.head.appendChild(st);
+  const club=document.querySelector('header .club');if(!club)return;
+  const b=document.createElement('button');b.id='btnInst';b.className='inst';b.type='button';
+  b.innerHTML='<span><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 3v12M7 10l5 5 5-5M5 21h14"/></svg>Instalar app</span>';club.appendChild(b);
+  b.addEventListener('click',async()=>{
+    if(dp){const p=dp;dp=null;p.prompt();try{const r=await p.userChoice;if(r&&r.outcome==='accepted')b.remove()}catch(e){}return}
+    const ios=/iPad|iPhone|iPod/.test(navigator.userAgent)||(navigator.platform==='MacIntel'&&navigator.maxTouchPoints>1);
+    let d=$('dInst');if(!d){d=document.createElement('dialog');d.id='dInst';d.className='dinst';document.body.appendChild(d)}
+    d.innerHTML='<h2>Instalar la app</h2>'+(ios
+      ?'<ol><li>Abre esta página en <b>Safari</b>.</li><li>Toca el botón <b>Compartir</b> (el cuadro con la flecha hacia arriba).</li><li>Elige <b>Agregar a pantalla de inicio</b> y luego <b>Agregar</b>.</li></ol><p>Quedará un ícono en tu pantalla como cualquier otra app.</p>'
+      :'<ol><li>Abre el menú del navegador (<b>⋮</b>, arriba a la derecha).</li><li>Elige <b>Instalar app</b> o <b>Agregar a pantalla de inicio</b>.</li></ol><p>En computadora también puedes usar el ícono de instalar que aparece a la derecha de la barra de dirección en Chrome o Edge.</p>')
+      +'<div class="acts"><button class="btn pri" type="button" id="dInstOk">Entendido</button></div>';
+    $('dInstOk').onclick=()=>d.close();d.showModal()})})();
+
 // ---------- organizar ----------
 const TF=[['edicion','Edición (ej. XXXI)'],['nombre','Nombre (ej. Torneo Challenger)'],['subtitulo','Subtítulo pequeño (ej. de tenis)'],['fechasTxt','Fechas como texto (ej. 23 Nov – 05 Dic)'],['inicio','Primer día','date'],['fin','Último día','date'],['sede','Sede'],['lema','Lema o club'],['contacto','Contacto de inscripciones'],['telefono','Teléfono']];
 function vOrg(){if(!canW)return '<p class="empty">Solo quien edita puede organizar.</p>';const t=S.T[S.tid]||{};
