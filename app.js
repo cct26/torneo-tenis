@@ -268,7 +268,8 @@ function avForm(){const d=S.avD,ed=S.avE&&S.av[S.avE];const img=S.avF?S.avF.url:
   <label class="full">Título (opcional)<input data-av="t" value="${esc(d.t)}" maxlength="120" placeholder="Ej. Jornada suspendida por lluvia"></label>
   <label class="full">Texto<textarea data-av="x" placeholder="Escribe el aviso. Puedes dejarlo vacío si solo subes una imagen.">${esc(d.x)}</textarea></label>
   ${assets?'<label>Imagen (opcional)<input type="file" id="avImg" accept="image/*"></label>':''}
-  <label class="chk"><input type="checkbox" data-av="fijo" ${d.fijo?'checked':''}> Fijar hasta arriba</label></div>
+  <label class="chk"><input type="checkbox" data-av="fijo" ${d.fijo?'checked':''}> Fijar hasta arriba</label>
+  <label class="chk"><input type="checkbox" data-av="push" ${(ed?d.push===true:d.push!==false)?'checked':''}> Enviar notificación a los celulares</label></div>
   ${img?`<div class="avprev"><img src="${esc(img)}" alt="Imagen del aviso"><button class="btn" data-avnoimg="1">Quitar imagen</button></div>`:''}
   <p class="note">Usa <code>**texto**</code> para negritas. Los enlaces se pueden tocar.</p>
   <div class="acts"><button class="btn pri" data-avpub="1" ${S.avBusy?'disabled':''}>${S.avBusy?'Publicando…':ed?'Guardar cambios':'Publicar aviso'}</button>${ed||d.t||d.x||S.avF?'<button class="btn" data-avcancel="1">Cancelar</button>':''}</div>
@@ -279,13 +280,15 @@ function avCard(a){const tit=a.t||'Aviso',img=avOk(a.img);
   ${img?`<a class="im" href="${esc(img)}" target="_blank" rel="noopener"><img src="${esc(img)}" alt="${esc(tit)}" loading="lazy"></a>`:''}
   ${canW?`<div class="acts"><button class="btn" data-avsh="${esc(a.id)}">Compartir</button><button class="btn" data-ave="${esc(a.id)}">Editar</button><button class="btn" data-avfix="${esc(a.id)}">${a.fijo?'Desfijar':'Fijar arriba'}</button><button class="btn ${S.avDel===a.id?'pri':''}" data-avdel="${esc(a.id)}">${S.avDel===a.id?'Toca otra vez para borrar':'Borrar'}</button></div>`:''}</article>`}
 function vAvisos(){const L=avList();avMark();
-  return `<div class="avs">${canW?avForm():''}${L.map(avCard).join('')||`<p class="empty">Todavía no hay avisos.${canW?'':' Aquí se publicarán suspensiones por lluvia, cambios de horario y anuncios del torneo.'}</p>`}</div>`}
+  return `<div class="avs">${pushCard()}${canW?avForm():''}${L.map(avCard).join('')||`<p class="empty">Todavía no hay avisos.${canW?'':' Aquí se publicarán suspensiones por lluvia, cambios de horario y anuncios del torneo.'}</p>`}</div>`}
 async function achica(f,max=1600){if(!/^image\/(jpe?g|png|webp|heic|heif)$/i.test(f.type||''))return f;
   try{const bmp=await createImageBitmap(f,{imageOrientation:'from-image'});const r=Math.min(1,max/Math.max(bmp.width,bmp.height));if(r===1&&f.size<900e3){bmp.close&&bmp.close();return f}
     const c=document.createElement('canvas');c.width=Math.round(bmp.width*r);c.height=Math.round(bmp.height*r);const x=c.getContext('2d');x.fillStyle='#fff';x.fillRect(0,0,c.width,c.height);x.drawImage(bmp,0,0,c.width,c.height);bmp.close&&bmp.close();
     const b=await new Promise(ok=>c.toBlob(ok,'image/jpeg',.86));if(!b||b.size>=f.size)return f;return new File([b],String(f.name||'aviso').replace(/\.\w+$/,'')+'.jpg',{type:'image/jpeg'})}catch(e){return f}}
 async function avClick(ds){
   if(ds.goav){location.hash='avisos';return true}
+  if(ds.pushon){pushOn();return true}
+  if(ds.pushoff){pushOff();return true}
   if(ds.avsh){const a=S.av[ds.avsh];if(!a)return true;const url=location.origin+location.pathname.replace(/admin\.html$/,'')+'#avisos';const text=[a.t,a.x].filter(Boolean).join('\n');
     try{if(navigator.share){await navigator.share({title:a.t||'Aviso del torneo',text,url})}else{await navigator.clipboard.writeText((text?text+'\n\n':'')+url);setSt('Aviso copiado. Ya lo puedes pegar en WhatsApp.');setTimeout(()=>setSt(''),4000)}}catch(e){}return true}
   if(!canW)return false;
@@ -294,7 +297,7 @@ async function avClick(ds){
     S.avBusy=true;S.msg='';render();
     try{if(S.avF)img=(await assets.upload(S.avF.blob,'avisos')).url;
       const id=S.avE||('a'+Date.now().toString(36));const o={t:String(d.t).trim(),x:String(d.x).trim(),img,fijo:!!d.fijo,ts:ed?(ed.ts||Date.now()):Date.now()};if(ed)o.edit=Date.now();
-      await db.doc(`torneos/${S.tid}/avisos/${id}`).set(o);S.av[id]=o;S.msg=ed?'Aviso actualizado.':'Aviso publicado.';avReset()}catch(err){S.msg='';fail(err)}
+      await db.doc(`torneos/${S.tid}/avisos/${id}`).set(o);S.av[id]=o;S.msg=ed?'Aviso actualizado.':'Aviso publicado.';const np=ed?d.push===true:d.push!==false;avReset();if(np)S.msg+=await avPush(o,id)}catch(err){S.msg='';fail(err)}
     S.avBusy=false;render();return true}
   if(ds.avcancel){avReset();S.msg='';render();return true}
   if(ds.avnoimg){if(S.avF){URL.revokeObjectURL(S.avF.url);S.avF=null}else S.avD.noImg=true;render();return true}
@@ -378,6 +381,50 @@ async function llClick(ds){if(!canW)return false;
     avReset();S.avD={t:'Partidos suspendidos por lluvia',x:`${dia}: los partidos${a.hs.length?' de las '+llY(a.hs)+' hrs':''} de ${a.mod==='D'?'dobles ':''}la rama ${llY(a.ramas)} quedan suspendidos por lluvia.\nSerán reprogramados; publicaremos las nuevas fechas aquí.`,fijo:false};
     S.llAv=null;S.llMsg='';S.llUndo=null;location.hash='avisos';return true}
   return false}
+
+// ---------- notificaciones push ----------
+const VAPID_PUB='BCRzFT-xmIjhd69wZ0G-jV4dX2fXi5UC1tP19UNTXC53PEuhkq8jF2SOthzl2_lzOYa34cGIUQDDpikfuck5rww';
+const PUSH_OK='serviceWorker' in navigator&&'PushManager' in window&&'Notification' in window;
+const PUSH_IOS=/iPad|iPhone|iPod/.test(navigator.userAgent)||(navigator.platform==='MacIntel'&&navigator.maxTouchPoints>1);
+Object.assign(S,{push:PUSH_OK?(Notification.permission==='denied'?'denied':'unknown'):'nosup',pushBusy:false});
+(()=>{const st=document.createElement('style');st.textContent=`
+.pushc{display:flex;flex-wrap:wrap;align-items:center;gap:10px 14px;background:var(--card);border:2px dashed var(--line);border-radius:14px;padding:12px 16px}
+.pushc.on{border-style:solid;border-color:var(--win)}
+.pushc p{margin:0;flex:1;min-width:220px}
+.pushc svg,.inst svg.bell{width:18px;height:18px;flex:none}`;document.head.appendChild(st)})();
+const BELL='<svg class="bell" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M6 8a6 6 0 1 1 12 0c0 7 3 9 3 9H3s3-2 3-9"/><path d="M10.3 21a1.94 1.94 0 0 0 3.4 0"/></svg>';
+const b64ToU8=s=>{const p='='.repeat((4-s.length%4)%4),b=atob((s+p).replace(/-/g,'+').replace(/_/g,'/'));return Uint8Array.from(b,c=>c.charCodeAt(0))};
+function pushPaint(){const club=document.querySelector('header .club');if(!club)return;let b=$('btnPush');const show=S.push==='off';
+  if(show&&!b){b=document.createElement('button');b.id='btnPush';b.className='inst';b.type='button';b.style.background='var(--navy)';b.addEventListener('click',()=>pushOn());club.appendChild(b)}
+  if(b){if(!show)b.remove();else b.innerHTML=`<span>${BELL}${S.pushBusy?'Activando…':'Activar avisos'}</span>`}}
+async function pushEstado(){if(!PUSH_OK)return;try{const reg=await navigator.serviceWorker.ready;const s=await reg.pushManager.getSubscription();
+    if(s&&Notification.permission==='granted'){S.push='on';if(sb)sb.rpc('push_suscribir',{p_sub:s.toJSON(),p_ua:navigator.userAgent}).then(()=>{},()=>{})}
+    else S.push=Notification.permission==='denied'?'denied':'off'}catch(e){S.push='off'}
+  pushPaint();if(S.view==='avisos')render()}
+async function pushOn(){if(!PUSH_OK||S.pushBusy)return;S.pushBusy=true;const perm=Notification.requestPermission();pushPaint();
+  try{if(await perm!=='granted'){S.push=Notification.permission==='denied'?'denied':'off';return}
+    const reg=await navigator.serviceWorker.ready;let s=await reg.pushManager.getSubscription();
+    if(!s)s=await reg.pushManager.subscribe({userVisibleOnly:true,applicationServerKey:b64ToU8(VAPID_PUB)});
+    const{error}=await sb.rpc('push_suscribir',{p_sub:s.toJSON(),p_ua:navigator.userAgent});if(error)throw error;
+    S.push='on';setSt('')}
+  catch(e){setSt('No se pudieron activar las notificaciones. Intenta de nuevo.')}
+  finally{S.pushBusy=false;pushPaint();if(S.view==='avisos')render()}}
+async function pushOff(){try{const reg=await navigator.serviceWorker.ready;const s=await reg.pushManager.getSubscription();
+    if(s){try{await sb.rpc('push_cancelar',{p_endpoint:s.endpoint})}catch(e){}await s.unsubscribe()}}catch(e){}
+  S.push='off';pushPaint();render()}
+function pushCard(){const st=S.push,solo=matchMedia('(display-mode: standalone)').matches||navigator.standalone===true;
+  if(st==='on')return`<div class="pushc on">${BELL}<p><b>Notificaciones activadas.</b> Te llegarán los avisos a este dispositivo aunque tengas la app cerrada.</p><button class="btn" data-pushoff="1">Desactivar</button></div>`;
+  if(st==='off'||st==='unknown')return`<div class="pushc">${BELL}<p><b>Recibe los avisos en tu celular</b> aunque tengas la app cerrada: lluvia, cambios de horario y anuncios.</p><button class="btn pri" data-pushon="1" ${S.pushBusy?'disabled':''}>${S.pushBusy?'Activando…':'Activar notificaciones'}</button></div>`;
+  if(st==='denied')return`<div class="pushc">${BELL}<p>Las notificaciones están bloqueadas para esta página. Para recibir los avisos, permítelas en los ajustes del navegador o del teléfono.</p></div>`;
+  if(PUSH_IOS&&!solo)return`<div class="pushc">${BELL}<p><b>¿Quieres recibir los avisos en tu iPhone?</b> Primero instala la app: en Safari toca <b>Compartir</b> → <b>Agregar a pantalla de inicio</b>. Ábrela desde el ícono y activa aquí las notificaciones.</p></div>`;
+  return''}
+async function avPush(o,id){if(!sb)return'';try{const body=String(o.x||'').replace(/\*\*/g,'').replace(/\s+/g,' ').trim().slice(0,180)||(o.img?'Toca para ver el aviso.':'');
+    const{data,error}=await sb.functions.invoke('avisar',{body:{title:o.t||'Aviso del torneo',body,url:'./#avisos',tag:'aviso-'+id,image:o.img||undefined}});if(error)throw error;
+    if(data&&data.error)throw new Error(data.error);
+    return data&&data.total?` Notificación enviada a ${data.enviados} de ${data.total} dispositivo${data.total===1?'':'s'}.`:' Todavía nadie ha activado las notificaciones.'}
+  catch(e){return' No se pudo enviar la notificación.'}}
+addEventListener('load',()=>setTimeout(pushEstado,600));
+document.addEventListener('visibilitychange',()=>{if(!document.hidden&&PUSH_OK&&S.push!=='on')pushEstado()});
 
 // ---------- organizar ----------
 const TF=[['edicion','Edición (ej. XXXI)'],['nombre','Nombre (ej. Torneo Challenger)'],['subtitulo','Subtítulo pequeño (ej. de tenis)'],['fechasTxt','Fechas como texto (ej. 23 Nov – 05 Dic)'],['inicio','Primer día','date'],['fin','Último día','date'],['sede','Sede'],['lema','Lema o club'],['contacto','Contacto de inscripciones'],['telefono','Teléfono']];
