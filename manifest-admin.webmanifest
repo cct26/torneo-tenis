@@ -1,0 +1,18 @@
+{
+  "id": "admin.html",
+  "name": "Torneo CCT · Editor",
+  "short_name": "Editor CCT",
+  "description": "Captura de resultados y organización del torneo de tenis del Club Campestre Tampico.",
+  "lang": "es-MX",
+  "start_url": "admin.html",
+  "scope": "./",
+  "display": "standalone",
+  "orientation": "any",
+  "background_color": "#1b1f66",
+  "theme_color": "#1b1f66",
+  "icons": [
+    {"src": "icon-192.png", "sizes": "192x192", "type": "image/png"},
+    {"src": "icon-512.png", "sizes": "512x512", "type": "image/png"},
+    {"src": "icon-maskable.png", "sizes": "512x512", "type": "image/png", "purpose": "maskable"}
+  ]
+}

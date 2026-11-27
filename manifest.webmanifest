@@ -1,0 +1,18 @@
+{
+  "id": "./",
+  "name": "Torneo de Tenis · Club Campestre Tampico",
+  "short_name": "Torneo CCT",
+  "description": "Partidos, grupos, llaves, resultados y avisos del torneo de tenis del Club Campestre Tampico.",
+  "lang": "es-MX",
+  "start_url": "./",
+  "scope": "./",
+  "display": "standalone",
+  "orientation": "any",
+  "background_color": "#1b1f66",
+  "theme_color": "#1b1f66",
+  "icons": [
+    {"src": "icon-192.png", "sizes": "192x192", "type": "image/png"},
+    {"src": "icon-512.png", "sizes": "512x512", "type": "image/png"},
+    {"src": "icon-maskable.png", "sizes": "512x512", "type": "image/png", "purpose": "maskable"}
+  ]
+}
